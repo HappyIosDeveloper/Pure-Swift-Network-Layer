@@ -9,3 +9,5 @@ Features:
 - Handles most network errors on the network layer.
 
 Here is a demonstration of using this network layer:
+
+[![preview]([https://example.com/path/to/image.png](https://github.com/HappyIosDeveloper/Pure-Swift-Network-Layer/blob/main/screenshot.png))](https://github.com/HappyIosDeveloper/Pure-Swift-Network-Layer/blob/main/screenshot.png)preview
