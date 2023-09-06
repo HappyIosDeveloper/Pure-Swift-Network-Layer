@@ -1,4 +1,4 @@
-# Pure-Swift-Network-Layer
+# Pure Swift Network Layer
 This is a simple app to show how we could use a simple, extendable network layer with Alamofire network interceptor with async await feature.
 
 Features:
