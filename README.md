@@ -10,4 +10,4 @@ Features:
 
 Here is a demonstration of using this network layer:
 
-[![preview](https://github.com/HappyIosDeveloper/Pure-Swift-Network-Layer/blob/main/screenshot.png)
+![preview](https://github.com/HappyIosDeveloper/Pure-Swift-Network-Layer/blob/main/screenshot.png)
