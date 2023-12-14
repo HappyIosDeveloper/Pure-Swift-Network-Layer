@@ -24,18 +24,19 @@ class WebService: NSObject {
 // MARK: - Base Functions
 extension WebService {
    
-    private func baseRequest<T: Codable>(for requestManager: RequestManager, type: T.Type, shouldShowBackendError: Bool = true) async throws -> T {
+    private func baseRequest<T: Codable>(for requestManager: RequestManager, type: T.Type, isErrorBannerEnabled: Bool = true) async throws -> T {
         do {
-            let data = try await baseRequestAPICall(requestManager, shouldShowBackendError: shouldShowBackendError)
+            let data = try await baseRequestAPICall(requestManager, isErrorBannerEnabled: isErrorBannerEnabled)
             logger(requestManager: requestManager, data: data)
-            showErrorBanner(for: data, url: requestManager.urlRequest?.url?.absoluteString, shouldShowBackendError: shouldShowBackendError, isLoggingEnabled: false)
+            showErrorBanner(for: data, url: requestManager.urlRequest?.url?.absoluteString, isErrorBannerEnabled: isErrorBannerEnabled, isLoggingEnabled: false)
             return try baseRequestDecodeData(data, for: T.self)
         } catch {
             throw error
         }
     }
+
     
-    private func baseRequestAPICall(_ requestManager: RequestManager, shouldShowBackendError: Bool = true) async throws -> Data {
+    private func baseRequestAPICall(_ requestManager: RequestManager, isErrorBannerEnabled: Bool = true) async throws -> Data {
         guard isNetworkConnectionReachable else { throw NetworkError.noConnection }
         var urlRequest = requestManager.urlRequest
         urlRequest?.timeoutInterval = timeOutDuration
@@ -46,10 +47,10 @@ extension WebService {
                     continuation.resume(returning: data)
                 } else if let errorData = response.error, let error = errorData.errorDescription {
                     print("\n*** json error for \(requestManager.urlRequest?.url?.absoluteString ?? "") => \(error)\n")
-                    self?.handleBaseRequestAPICallError(errorData, response, shouldShowBackendError: shouldShowBackendError)
+                    self?.handleBaseRequestAPICallError(errorData, response, isErrorBannerEnabled: isErrorBannerEnabled)
                     continuation.resume(returning: Data())
                 } else {
-                    self?.handleBaseRequestAPICallError(.sessionTaskFailed(error: response.error ?? NetworkError.decodingDataCorrupted), response, shouldShowBackendError: shouldShowBackendError)
+                    self?.handleBaseRequestAPICallError(.sessionTaskFailed(error: response.error ?? NetworkError.decodingDataCorrupted), response, isErrorBannerEnabled: isErrorBannerEnabled)
                     continuation.resume(returning: Data())
                 }
                 return
@@ -57,47 +58,32 @@ extension WebService {
         }
     }
     
-    private func handleBaseRequestAPICallError(_ error: AFError, _ response: AFDataResponse<Data>, shouldShowBackendError: Bool) {
+    private func handleBaseRequestAPICallError(_ error: AFError, _ response: AFDataResponse<Data>, isErrorBannerEnabled: Bool) {
         switch error {
         case .responseSerializationFailed(let reason):
             print("*** Error => responseSerializationFailed => ", reason)
-            if shouldShowBackendError {
-                mainThread {
-//                    BannerManager.showMessage(messageText: "error".localized())
-                }
-            }
         case .serverTrustEvaluationFailed:
             print("*** Certificate Pinning Error")
-            if shouldShowBackendError {
-                mainThread {
-//                    BannerManager.showMessage(messageText: "error".localized())
-                }
-            }
         case .sessionTaskFailed(let error):
             print("*** sessionTaskFailed Error:", error)
-            if error.localizedDescription.contains("timed out") && shouldShowBackendError {
-                mainThread {
-//                    BannerManager.showMessage(messageText: "error".localized(), style: .danger)
-                }
-            }
         default:
-            showErrorBanner(for: response.data, url: response.request?.url?.absoluteString, shouldShowBackendError: shouldShowBackendError, isLoggingEnabled: true)
+            print("*** other Error:", error)
         }
     }
     
-    private func showErrorBanner(for data: Data?, url: String?, shouldShowBackendError: Bool, isLoggingEnabled: Bool) {
+    private func showErrorBanner(for data: Data?, url: String?, isErrorBannerEnabled: Bool, isLoggingEnabled: Bool) {
         if let data = data {
             do {
                 
                 // MARK: If you have a custom error model, you can parse it here
                 //                let customError = try baseRequestDecodeData(data, for: ErrorModel.self)
-                if shouldShowBackendError {
+                if isErrorBannerEnabled {
                     //                    let code = customError.result.status.code?.intValue ?? customError.result.status.statusCode?.intValue ?? 101
                     //                    if code != 200 {
                     print("*** FAILURE => for => \(String(describing: url))")
-                    mainThread {
-                        //                            BannerManager.showMessage(messageText: "error".localized())
-                    }
+                    //                    mainThread {
+                    //                            BannerManager.showMessage(messageText: "error".localized())
+                    //                    }
                     //                    }
                 }
             } catch {
@@ -112,24 +98,35 @@ extension WebService {
         }
     }
 
-    private func baseRequestDecodeData<T: Codable>(_ data: Data, for type: T.Type) throws -> T {
+
+    private func baseRequestDecodeData<T: Codable>(_ data: Data, for type: T.Type, isLogEnabled: Bool = true) throws -> T {
         do {
             let decoder = JSONDecoder()
             return try decoder.decode(T.self, from: data)
         } catch DecodingError.dataCorrupted(let context) {
-            print("*** Decode Error - dataCorrupted : \(context)")
+            if isLogEnabled {
+                print("*** Decode Error - dataCorrupted : \(context)")
+            }
             throw NetworkError.decodingDataCorrupted
         } catch DecodingError.keyNotFound(let key, let context) {
-            print("*** Decode Error - keyNotFound | Key '\(key)' not found: \(context.debugDescription)")
+            if isLogEnabled {
+                print("*** Decode Error - keyNotFound | Key '\(key)' not found: \(context.debugDescription)")
+            }
             throw NetworkError.decodingKeyNotFound
         } catch DecodingError.valueNotFound(let value, let context) {
-            print("*** Decode Error - valueNotFound | Value '\(value)' not found: \(context.debugDescription)")
+            if isLogEnabled {
+                print("*** Decode Error - valueNotFound | Value '\(value)' not found: \(context.debugDescription)")
+            }
             throw NetworkError.decodingValueNotFound
         } catch DecodingError.typeMismatch( _, let context) {
-            print("*** Decode Error - Type Mismatch | mismatch: \(context.debugDescription), coding Path: \(context.codingPath).")
+            if isLogEnabled {
+                print("*** Decode Error - Type Mismatch | mismatch: \(context.debugDescription), coding Path: \(context.codingPath).")
+            }
             throw NetworkError.decodingTypeMisMatch
         } catch {
-            print("*** error: \(error)")
+            if isLogEnabled {
+                print("*** error: \(error)")
+            }
             throw NetworkError.decodingUnknown
         }
     }
