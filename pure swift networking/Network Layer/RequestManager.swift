@@ -27,41 +27,43 @@ enum RequestManager: URLRequestConvertible {
     
     // MARK: Base Functions
     func asURLRequest() throws -> URLRequest {
-        guard let url = try? RequestURLManager.shared.getURL(for: self).asURL() else { return URLRequest(url: URL(string: "FAILED TO ENCODE THIS URL => \(self.urlRequest?.url?.absoluteString ?? "?")")!)}
+        let url = try RequestURLManager.shared.getURL(for: self).asURL()
+        let errorURL = URLRequest(url: URL(string: "FAILED TO ENCODE URL")!)
         var urlRequest = URLRequest(url: url)
-        var urlComponents = URLComponents(string: "\(urlRequest)")
-        if let parameters = RequestQueryParamManager.shared.getQueryParam(for: self) {
-            var param = [URLQueryItem]()
-            parameters.keys.forEach({ (key) in param.append(URLQueryItem(name: key, value: "\(parameters[key]!)")) })
-            if !param.isEmpty {
-                urlComponents?.queryItems = param
+        guard var urlComponents = URLComponents(string: urlRequest.description) else { return errorURL }
+        if let parameters = RequestQueryParamManager.shared.getQueryParam(for: self), !parameters.isEmpty {
+            var params = [URLQueryItem]()
+            parameters.keys.forEach { key in
+                params.append(URLQueryItem(name: key, value: parameters[key] as? String ?? ""))
+            }
+            urlComponents.queryItems = params
+            if let url = urlComponents.url {
+                urlRequest = URLRequest(url: url)
+            } else {
+                print("failed to create URLRequest")
             }
         }
-        urlRequest = URLRequest(url: (urlComponents?.url)!)
         if let body = RequestBodyManager.shared.getBody(for: self) {
             urlRequest.httpBody = try JSONSerialization.data(withJSONObject: body)
         }
         urlRequest.setValue(ContentType.json.rawValue, forHTTPHeaderField: HTTPHeaderField.contentType.rawValue)
         if let headers = RequestHeaderManager.shared.getHeader(for: self) {
-            for header in headers {
-                if let value = header.value {
-                    urlRequest.setValue(value, forHTTPHeaderField: header.field)
-                }
+            for header in headers where header.value != nil {
+                urlRequest.setValue(header.value ?? "", forHTTPHeaderField: header.field)
             }
         }
-        urlRequest.httpMethod = getMethod().rawValue
+        urlRequest.httpMethod = method.rawValue
         return urlRequest
     }
 }
 
+// MARK: - Http Method
 extension RequestManager {
     
-    func getMethod()-> HTTPMethod {
-        switch self {
-        case .refreshToken:
-            return .post
-        default:
-            return .get
+    var method: HTTPMethod {
+        return switch self {
+        case .refreshToken: .post
+        default: .get
         }
     }
 }

@@ -14,12 +14,7 @@ class NetworkInterceptor: Alamofire.Interceptor {
     var maxRetry = 1
     private let lock = NSLock()
     private var requestsToRetry: [ (RetryResult) -> Void] = []
-    private var webService: WebService
-    
-    init(webService: WebService) {
-        self.webService = webService
-        super.init()
-    }
+    private var webService = WebService()
     
     override func adapt(_ urlRequest: URLRequest, for session: Session, completion: @escaping (Result<URLRequest, Error>) -> Void) {
         var request = urlRequest
