@@ -14,7 +14,6 @@ class NetworkInterceptor: Alamofire.Interceptor {
     var maxRetry = 1
     private let lock = NSLock()
     private var requestsToRetry: [ (RetryResult) -> Void] = []
-    private var webService = WebService()
     
     override func adapt(_ urlRequest: URLRequest, for session: Session, completion: @escaping (Result<URLRequest, Error>) -> Void) {
         var request = urlRequest
@@ -112,7 +111,7 @@ extension NetworkInterceptor {
     private func callRefreshToken(isTokenRefreshed: @escaping ()-> Void, isForcedToShowFailedView: @escaping ()-> Void, isForcedToLogOutUser: @escaping ()-> Void) {
         Task { @MainActor in
             do {
-                _ = try await webService.refreshToken()
+                _ = try await WebService().refreshToken() // Or you could directly use the AF if you don't want to make the refrences complicated...
                 isTokenRefreshed()
             } catch {
                 isForcedToLogOutUser()
