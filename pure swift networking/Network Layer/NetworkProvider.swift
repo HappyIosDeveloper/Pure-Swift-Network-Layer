@@ -9,9 +9,9 @@ import Alamofire
 import Foundation
 
 class NetworkProvider {
-
+    
     private let timeOutDuration: Double = 30
-
+    
     func request<T: Codable>(for requestManager: RequestManager, type: T.Type, isErrorBannerEnabled: Bool = true) async throws -> T {
         do {
             let data = try await baseRequestAPICall(requestManager, isErrorBannerEnabled: isErrorBannerEnabled)
@@ -29,17 +29,21 @@ class NetworkProvider {
         var urlRequest = requestManager.urlRequest
         urlRequest?.timeoutInterval = timeOutDuration
         AF.session.configuration.timeoutIntervalForRequest = timeOutDuration
-        return await withCheckedContinuation { continuation in
+        return try await withCheckedThrowingContinuation { continuation in
             AF.request(urlRequest!, interceptor: NetworkInterceptor()).validate().responseData { [weak self] response in
                 if let data = response.data {
                     continuation.resume(returning: data)
                 } else if let errorData = response.error, let error = errorData.errorDescription {
                     print("\n*** json error for \(requestManager.urlRequest?.url?.absoluteString ?? "") => \(error)\n")
                     self?.handleBaseRequestAPICallError(errorData, response, isErrorBannerEnabled: isErrorBannerEnabled)
-                    continuation.resume(returning: Data())
+                    if let error = response.error {
+                        continuation.resume(throwing: error)
+                    } else {
+                        continuation.resume(throwing: NetworkError.decodingDataCorrupted)
+                    }
                 } else {
                     self?.handleBaseRequestAPICallError(.sessionTaskFailed(error: response.error ?? NetworkError.decodingDataCorrupted), response, isErrorBannerEnabled: isErrorBannerEnabled)
-                    continuation.resume(returning: Data())
+                    continuation.resume(throwing: NetworkError.decodingValueNotFound)
                 }
                 return
             }
@@ -60,29 +64,7 @@ class NetworkProvider {
     }
     
     private func showErrorBanner(for data: Data?, url: String?, isErrorBannerEnabled: Bool, isLoggingEnabled: Bool) {
-        //        if let data = data {
-        //            do {
         // MARK: If you have a custom error model, you can parse it here
-        //                let customError = try baseRequestDecodeData(data, for: ErrorModel.self)
-        //                if isErrorBannerEnabled {
-        //                    let code = customError.result.status.code?.intValue ?? customError.result.status.statusCode?.intValue ?? 101
-        //                    if code != 200 {
-        //        print("*** FAILURE => for => \(String(describing: url))")
-        //                    mainThread {
-        //                            BannerManager.showMessage(messageText: "error".localized())
-        //                    }
-        //                    }
-        //                }
-        //            } catch {
-        //                if isLoggingEnabled {
-        //                    print("*** FAILURE => ERROR DESCRIPTION => \(String(describing: error.localizedDescription))")
-        //                }
-        //            }
-        //        } else {
-        //            if isLoggingEnabled {
-        //                print("*** FAILURE => ERROR DESCRIPTION => There is no data to parse for \(url?.description ?? "?")")
-        //            }
-        //        }
     }
     
     
