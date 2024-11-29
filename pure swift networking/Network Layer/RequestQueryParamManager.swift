@@ -9,9 +9,13 @@ import Foundation
 
 class RequestQueryParamManager {
     
-    static var shared = RequestQueryParamManager()
-
-    func getQueryParam(for request: RequestManager)-> [String: Any]? {
+    var request: RequestManager
+    
+    init(for request: RequestManager) {
+        self.request = request
+    }
+    
+    var queryParam: [String: Any]? {
         switch request {
         case .name(let name):
             return [

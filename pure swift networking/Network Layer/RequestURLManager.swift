@@ -8,9 +8,13 @@ import Foundation
 
 class RequestURLManager {
     
-    static var shared = RequestURLManager()
+    var request: RequestManager
     
-    func getURL(for request: RequestManager)-> String {
+    init(for request: RequestManager) {
+        self.request = request
+    }
+    
+    var urlString: String {
         switch request {
         case .name:
             return "https://api.genderize.io/"

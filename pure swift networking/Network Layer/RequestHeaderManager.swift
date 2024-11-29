@@ -8,10 +8,14 @@
 import Foundation
 
 class RequestHeaderManager {
+ 
+    var request: RequestManager
     
-    static var shared = RequestHeaderManager()
+    init(for request: RequestManager) {
+        self.request = request
+    }
     
-    func getHeader(for request: RequestManager)-> [(value: String?, field: String)]? {
+    var header: [(value: String?, field: String)]? {
         var result: [(value: String?, field: String)]?
         switch request {
         case .refreshToken:

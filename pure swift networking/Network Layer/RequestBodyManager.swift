@@ -9,9 +9,13 @@ import Foundation
 
 class RequestBodyManager {
     
-    static var shared = RequestBodyManager()
-
-    func getBody(for request: RequestManager)-> [String : Any]? {
+    var request: RequestManager
+    
+    init(for request: RequestManager) {
+        self.request = request
+    }
+    
+    var body: [String : Any]? {
         var result: [String : Any]?
         switch request {
         case .refreshToken:

@@ -27,11 +27,11 @@ enum RequestManager: URLRequestConvertible {
     
     // MARK: Base Functions
     func asURLRequest() throws -> URLRequest {
-        let url = try RequestURLManager.shared.getURL(for: self).asURL()
+        let url = try RequestURLManager(for: self).urlString.asURL()
         let errorURL = URLRequest(url: URL(string: "FAILED TO ENCODE URL")!)
         var urlRequest = URLRequest(url: url)
         guard var urlComponents = URLComponents(string: urlRequest.description) else { return errorURL }
-        if let parameters = RequestQueryParamManager.shared.getQueryParam(for: self), !parameters.isEmpty {
+        if let parameters = RequestQueryParamManager(for: self).queryParam, !parameters.isEmpty {
             var params = [URLQueryItem]()
             parameters.keys.forEach { key in
                 params.append(URLQueryItem(name: key, value: parameters[key] as? String ?? ""))
@@ -43,11 +43,11 @@ enum RequestManager: URLRequestConvertible {
                 print("failed to create URLRequest")
             }
         }
-        if let body = RequestBodyManager.shared.getBody(for: self) {
+        if let body = RequestBodyManager(for: self).body {
             urlRequest.httpBody = try JSONSerialization.data(withJSONObject: body)
         }
         urlRequest.setValue(ContentType.json.rawValue, forHTTPHeaderField: HTTPHeaderField.contentType.rawValue)
-        if let headers = RequestHeaderManager.shared.getHeader(for: self) {
+        if let headers = RequestHeaderManager(for: self).header {
             for header in headers where header.value != nil {
                 urlRequest.setValue(header.value ?? "", forHTTPHeaderField: header.field)
             }
